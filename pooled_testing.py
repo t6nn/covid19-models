@@ -112,63 +112,32 @@ def run_simulation(batches, false_neg_probability, retries_on_negative):
 
 false_negatives = [0.003]
 #pool_sizes = [2 ** x for x in range(0, 7)]
-pool_sizes = np.full(5, 32)
+#pool_sizes = np.full(5, 64)
+pool_sizes = [8, 16, 32, 64, 128]
+#pool_sizes = [8]
+
 
 print(false_negatives)
 print(pool_sizes)
 
-population_size = 30000
-infection_rate = 0.005
+population_size = 5000
+#infection_rates = [0.01, 0.02, 0.03, 0.04, 0.05]
+infection_rates = [0.02]
 
-population = [Sample(infection_rate) for _ in range(0, population_size)]
+retries = 1
+
 
 for false_negative in false_negatives:
-    plt.figure()
-    positive = []
 
-    error_single_test = []
-    error_no_retries = []
-    tests_used_no_retries = []
-    
-    error_with_one_retry = []
-    tests_used_one_retry = []
-    
-    error_with_n_retries = []
-    tests_used_n_retries = []
+    for infection_rate in infection_rates:
 
-    total_error = 0.0
+        population = [Sample(infection_rate) for _ in range(0, population_size)]
 
-    for pool_size in pool_sizes:
-        batches = create_batches(population, pool_size)
+        for i in range(1, 20):
+            for pool_size in pool_sizes:
+                batches = create_batches(population, pool_size)
 
-        result_with_no_retries = run_simulation(batches, false_negative, 0)
-        #print("No retries: %s error %.4f" % (result_with_no_retries, 100 * result_with_no_retries['pooled_false_negatives'] / result_with_no_retries['infected']))
+                result = run_simulation(batches, false_negative, retries)
 
-        #total_error = total_error + (100 * result_with_no_retries['pooled_false_negatives'] / result_with_no_retries['infected'])
-        
-        result_with_one_retry = run_simulation(batches, false_negative, 1)
-        print("One retry: %s error %.4f " % (result_with_one_retry, 100 * result_with_one_retry['pooled_false_negatives'] / result_with_one_retry['infected']))
+                print("%.4f %s %s %s %.4f %s" % (infection_rate, pool_size, result['infected'], result['pooled_false_negatives'], 100 * result['pooled_false_negatives'] / result['infected'], result['used_tests']))
 
-
-        total_error = total_error + (100 * result_with_one_retry['pooled_false_negatives']  / result_with_one_retry['infected'])
-        
-        result_with_n_retries = run_simulation(batches, false_negative, pool_size - 1)
-        #print("%d retries: %s error %.4f " % (pool_size - 1, result_with_no_retries, 100 * (result_with_n_retries['infected'] - result_with_n_retries['pooled_pos']) / result_with_n_retries['infected']))
-
-        error_single_test.append(100 * (result_with_no_retries['infected'] - result_with_no_retries['tested_pos']) / result_with_no_retries['infected'])
-        error_no_retries.append(100 * (result_with_no_retries['infected'] - result_with_no_retries['pooled_pos']) / result_with_no_retries['infected'])
-        error_with_one_retry.append(100 * (result_with_one_retry['infected'] - result_with_one_retry['pooled_pos']) / result_with_one_retry['infected'])
-        error_with_n_retries.append(100 * (result_with_n_retries['infected'] - result_with_n_retries['pooled_pos']) / result_with_n_retries['infected'])
-        
-       
-
-    print ("Average error %.4f" % (total_error/len(pool_sizes))) 
-    print ("False negative rate of tests: %.4f" % (100.0 * false_negative))
-    plt.figure(figsize=(20, 10))
-    plt.plot(pool_sizes, error_single_test, 'k-')
-    plt.plot(pool_sizes, error_no_retries, 'ro')
-    plt.plot(pool_sizes, error_with_one_retry, 'bo')
-    plt.plot(pool_sizes, error_with_n_retries, 'g^')
-    
-    plt.ylim(ymin=0)
-    #plt.show()
